@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(cors());
 app.use(express.json());
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wotzmkf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -25,6 +25,7 @@ async function run() {
    
     const classesCollection = client.db("fitnessDb").collection("classes");
     const trainerCollection = client.db("fitnessDb").collection("trainers");
+    const usersCollection = client.db("fitnessDb").collection("users");
 
 
     //  // jwt related api
@@ -55,6 +56,32 @@ async function run() {
     // Send a ping to confirm a successful connection
    
 
+    // save a user data in db
+    app.put('/user', async(req, res) => {
+      const user = req.body
+      const query = {email: user?.email}
+      //check if user already exists in db 
+      const isExist = await usersCollection.findOne(query)
+      if(isExist) return res.send(isExist)
+
+        // save user for the first time
+      const options = {upsert: true}
+      const updateDoc = {
+        $set: {
+          ...user,
+          timestamp: Date.now(),
+        },
+      }
+      const result = await usersCollection.updateOne(query, updateDoc, options)
+      res.send(result);
+    })
+
+
+    // get all users data from db
+    app.get('/users', async(req, res) => {
+      const result = await usersCollection.find().toArray()
+      res.send(result)
+    })
 
     // get all classes from db
     app.get('/classes', async(req, res) =>{
