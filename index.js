@@ -26,6 +26,8 @@ async function run() {
     const classesCollection = client.db("fitnessDb").collection("classes");
     const trainerCollection = client.db("fitnessDb").collection("trainers");
     const usersCollection = client.db("fitnessDb").collection("users");
+    const trainerApplicationCollection = client.db("fitnessDb").collection("trainerApplications");
+
 
 
      // jwt related api
@@ -76,6 +78,13 @@ async function run() {
       res.send(result);
     })
 
+    // get a user info by email from db
+    app.get('/user/:email', async(req, res)=>{
+      const email = req.params.email
+      const result = await usersCollection.findOne({email})
+      res.send(result)
+    })
+
 
     // get all users data from db
     app.get('/users',verifyToken, async(req, res) => {
@@ -103,6 +112,21 @@ async function run() {
       const result = await trainerCollection.findOne(query)
       res.send(result);
     });
+
+
+
+
+    // Add the new route here
+    app.post('/trainerApplications',verifyToken, async (req, res) => {
+      const trainerData = req.body;
+      try {
+        const result = await trainerApplicationCollection.insertOne(trainerData);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to save trainer data', error });
+      }
+    });
+
 
 
 
