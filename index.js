@@ -34,9 +34,12 @@ async function run() {
       .db("fitnessDb")
       .collection("trainerApplications");
 
-      const subscriptionsCollection = client
+    const subscriptionsCollection = client
       .db("fitnessDb")
       .collection("subscriptions");
+
+      const trainerSlotsCollection = client.db("fitnessDb").collection("trainerSlots");
+      
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -98,8 +101,6 @@ async function run() {
       res.send(result);
     });
 
-
-
     // get all classes from db
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray();
@@ -141,15 +142,18 @@ async function run() {
       }
     });
 
-
     // Handle subscription POST request
     app.post("/subscribe", async (req, res) => {
       const subscriptionData = req.body;
       try {
-        const result = await subscriptionsCollection.insertOne(subscriptionData);
+        const result = await subscriptionsCollection.insertOne(
+          subscriptionData
+        );
         res.send(result);
       } catch (error) {
-        res.status(500).send({ message: "Failed to save subscription data", error });
+        res
+          .status(500)
+          .send({ message: "Failed to save subscription data", error });
       }
     });
 
@@ -159,7 +163,21 @@ async function run() {
         const result = await subscriptionsCollection.find().toArray();
         res.send(result);
       } catch (error) {
-        res.status(500).send({ message: "Failed to fetch subscribers data", error });
+        res
+          .status(500)
+          .send({ message: "Failed to fetch subscribers data", error });
+      }
+    });
+
+
+    // Add trainer slot
+    app.post("/trainerSlots", verifyToken, async (req, res) => {
+      const slotData = req.body;
+      try {
+        const result = await trainerSlotsCollection.insertOne(slotData);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to save slot data", error });
       }
     });
 
