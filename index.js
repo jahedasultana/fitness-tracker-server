@@ -33,6 +33,8 @@ async function run() {
   const trainerCollection = client.db('fitnessDb').collection('trainers');
   const slotsCollection = client.db('fitnessDb').collection('slots');
 
+  const slotCollection = client.db('fitnessDb').collection('slot');
+
   const forumCollection = client.db('fitnessDb').collection('forum');
   const reviewCollection = client.db('fitnessDb').collection('review');
 
@@ -67,20 +69,104 @@ async function run() {
       });
     };
 
-    // Send a ping to confirm a successful connection
 
-     app.get('/slots', async (req, res) => {
-            const result = await slotsCollection.find({
-                status: 'pending'
-            }).toArray();
-            res.send(result);
-        })
+    // verify admin middleware
+    const verifyAdmin = async (req, res, next) => {
+        console.log('hello')
+        const user = req.user
+        const query = { email: user?.email }
+        const result = await usersCollection.findOne(query)
+        console.log(result?.role)
+        if (!result || result?.role !== 'admin')
+          return res.status(401).send({ message: 'unauthorized access!!' })
+  
+        next()
+      }
+      // verify trainer middleware
+      const verifyTrainer = async (req, res, next) => {
+        console.log('hello')
+        const user = req.user
+        const query = { email: user?.email }
+        const result = await usersCollection.findOne(query)
+        console.log(result?.role)
+        if (!result || result?.role !== 'trainer') {
+          return res.status(401).send({ message: 'unauthorized access!!' })
+        }
+  
+        next()
+      }
+
+
+
+    // Send a ping to confirm a successful connection
+    app.get('/slot-slot', async (req, res) => {
+        const result = await slotsCollection.find({
+            status: 'pending'
+        }).toArray();
+        res.send(result);
+    })
+
+
+
+        app.get('/slots', async (req, res) => {
+            try {
+              const result = await slotsCollection.find({ status: 'approved' }).toArray();
+              res.send(result);
+            } catch (error) {
+              res.status(500).send({ message: "Failed to fetch slots data", error });
+            }
+          });
+
+
         // save become trainer slots data to db
         app.post('/slots', async (req, res) => {
             const slot = req.body;
             const result = await slotsCollection.insertOne(slot)
             res.send(result);
         })
+
+
+        app.post('/slot', async (req, res) => {
+            const slot = req.body;
+            const result = await slotCollection.insertOne(slot)
+            res.send(result);
+        });
+
+        
+        app.get("/slot-add/:email", async (req, res) => {
+            try {
+                const email = req.params.email;
+                const query = { email: email }
+                const result = await slotCollection.findOne(query);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch trainer slots data", error });
+            }
+        });
+
+       
+
+
+        //for details page
+        app.get('/slot/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!ObjectId.isValid(id)) {
+              return res.status(400).send({ error: 'Invalid slot ID format' });
+            }
+            try {
+              const query = { _id: new ObjectId(id) };
+              const result = await slotsCollection.findOne(query);
+              if (!result) {
+                return res.status(404).send({ error: 'Slot not found' });
+              }
+              res.send(result);
+            } catch (error) {
+              res.status(500).send({ message: 'Failed to fetch slot data', error });
+            }
+          });
+
+
+
         //Trainer slots 
         app.post('/trainers', async (req, res) => {
             const slot = req.body;
@@ -109,7 +195,7 @@ async function run() {
                     });
                     // user role to trainer
                     const trainerQuery = { email: email }
-                    const trainerResult = await trainerCollection.updateOne(trainerQuery, {
+                    const trainerResult = await usersCollection.updateOne(trainerQuery, {
                         $set: { role: "trainer" },
                     });
 
@@ -148,57 +234,85 @@ async function run() {
                 success: true,
                 message: 'demoted successfully'
             }).status(200)
-        })
-        //save user data in database
+        });
+
+        
+      
         app.put('/user', async (req, res) => {
             const user = req.body;
-            const query = { email: user?.email }
-            // check if user already in database
-            const isExist = await usersCollection.findOne(query);
-            if (isExist) {
-                if (user.status === 'Requested') {
-                    // if existing user try to change his role
-                    const result = await usersCollection.updateOne(query, {
-                        $set: { status: user?.status },
-                    })
-                    return res.send(result)
+            const query = { email: user?.email };
+        
+            try {
+                // Check if user already exists in the database
+                const existingUser = await usersCollection.findOne(query);
+        
+                if (existingUser) {
+                    if (user.status === 'Requested') {
+                        // Update the user status if they request a status change
+                        const result = await usersCollection.updateOne(query, {
+                            $set: { status: user?.status },
+                        });
+                        return res.send(result);
+                    } else if (user.name) {
+                        // Update only non-role fields if the user logs in again and has a valid name
+                        const updateDoc = {
+                            $set: {
+                                name: user.name,
+                                status: user.status,
+                                Timestamp: Date.now(),
+                            },
+                        };
+                        const result = await usersCollection.updateOne(query, updateDoc);
+                        return res.send(result);
+                    } else {
+                        // If existing user logs in again and doesn't require an update, return their data
+                        return res.send(existingUser);
+                    }
                 } else {
-                    // if existing user login again
-                    return res.send(isExist)
+                    // If user doesn't exist in the database, insert them as a new entry
+                    if (user.name) {
+                        const newUser = {
+                            ...user,
+                            Timestamp: Date.now(),
+                        };
+                        const result = await usersCollection.insertOne(newUser);
+                        return res.send(result);
+                    } else {
+                        return res.status(400).send({ message: "Name cannot be null" });
+                    }
                 }
+            } catch (error) {
+                console.error("Error updating user:", error);
+                res.status(500).send({ message: "Internal server error", error });
             }
-            // save user for the first time
-            const options = { upsert: true }
-            const updateDoc = {
-                ...user,
-                Timestamp: Date.now()
+        });
 
-            }
-            const result = await usersCollection.insertOne(updateDoc, options)
-            res.send(result)
-        })
+
+
         // get all user email from db.
         app.get('/user/:email', async (req, res) => {
             const email = req.params.email;
             const result = await usersCollection.findOne({ email });
             res.send(result);
-        })
+        });
+
         // get all users data from db
         app.get('/users', async (req, res) => {
             const result = await usersCollection.find().toArray()
             res.send(result)
-        })
+        });
+
+
         app.get('/users/trainer', async (req, res) => {
             const result = await usersCollection.find({
                 role: 'trainer'
             }).toArray()
             res.send(result)
         })
-        // Forum API 
-        app.get('/forum', async (req, res) => {
-            const result = await forumCollection.find().toArray();
-            res.send(result);
-        })
+
+
+
+
         //review related Api
         app.get('/review', async (req, res) => {
             const result = await reviewCollection.find().toArray();
@@ -226,16 +340,21 @@ async function run() {
         });
 
         // collect all class from database
-        app.get('/classes', async (req, res) => {
+        app.get('/class', async (req, res) => {
             const result = await classCollection.find().toArray();
             res.send(result)
         })
+
+
         // save add class data from database 
         app.post("/class", async (req, res) => {
             const ClassData = req.body;
             const result = await classCollection.insertOne(ClassData);
             res.send(result);
         });
+
+
+
         app.post("/pay-now", async (req, res) => {
             const { trainer_info, trainer_id, slot_name, package_name, price, user_id, email, otherInfo } = req.body;
 
@@ -265,6 +384,8 @@ async function run() {
                 'result': true
             }).status(200);
         });
+
+
         app.get("/payment-list", async (req, res) => {
 
             // Insert the payment document into the collection
@@ -318,7 +439,45 @@ async function run() {
 
             result.classLists = classList;
             res.send(result);
-        })
+        });
+
+
+
+
+     // Forum-related APIs
+    // Add a new forum post
+    app.post("/forum", async (req, res) => {
+        const ForumData = req.body;
+        const result = await forumCollection.insertOne(ForumData);
+        res.send(result);
+    });
+
+    
+
+    
+      // Get forum posts with pagination
+      app.get("/forum", async (req, res) => {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 6;
+        const skip = (page - 1) * limit;
+        const total = await forumCollection.countDocuments();
+        const forums = await forumCollection.find().skip(skip).limit(limit).toArray();
+        res.send({ forums, total, page, pages: Math.ceil(total / limit) });
+      });
+  
+      
+      // Upvote or downvote a forum post
+      app.post('/forum/vote', verifyToken, async (req, res) => {
+        try {
+          const { postId, voteType } = req.body; // voteType can be 'upvote' or 'downvote'
+          const update = voteType === 'upvote' ? { $inc: { 'votes.upvotes': 1 } } : { $inc: { 'votes.downvotes': 1 } };
+          const result = await forumCollection.updateOne({ _id: new ObjectId(postId) }, update);
+          res.send(result);
+        } catch (error) {
+          res.status(500).send({ message: "Failed to vote on forum post", error });
+        }
+      });     
+
 
 
         await client.db("admin").command({ ping: 1 });
