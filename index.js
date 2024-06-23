@@ -74,32 +74,6 @@ async function run() {
       });
     };
 
-    // // verify admin middleware
-    // const verifyAdmin = async (req, res, next) => {
-    //   console.log("hello");
-    //   const user = req.decoded;
-    //   const query = { email: user?.email };
-    //   const result = await usersCollection.findOne(query);
-    //   console.log(result?.role);
-    //   if (!result || result?.role !== "admin")
-    //     return res.status(401).send({ message: "unauthorized access!!" });
-
-    //   next();
-    // };
-    // // verify trainer middleware
-    // const verifyTrainer = async (req, res, next) => {
-    //   console.log("hello");
-    //   const user = req.decoded;
-    //   const query = { email: user?.email };
-    //   const result = await usersCollection.findOne(query);
-    //   console.log(result?.role);
-    //   if (!result || result?.role !== "trainer") {
-    //     return res.status(401).send({ message: "unauthorized access!!" });
-    //   }
-
-    //   next();
-    // };
-
     // Send a ping to confirm a successful connection
     app.get("/slot-slot", verifyToken, async (req, res) => {
       const result = await slotsCollection
@@ -113,7 +87,7 @@ async function run() {
     app.get("/slots", async (req, res) => {
       try {
         const result = await slotsCollection
-          .find({ status: "approved" })
+          .find({ status: "approved", role: "trainer" })
           .toArray();
         res.send(result);
       } catch (error) {
@@ -229,7 +203,7 @@ async function run() {
           const email = req.params.email;
           const query = { email: email };
           const result = await slotsCollection.updateOne(query, {
-            $set: { status: "approved" },
+            $set: { status: "approved", role: "trainer" },
           });
           // user role to trainer
           const trainerQuery = { email: email };
@@ -247,27 +221,13 @@ async function run() {
       }
     });
 
-    app.post("/users/trainer/demote/:email", async (req, res) => {
-      const trainer = await trainerCollection.findOne({
-        email: req.params.email,
+    app.delete("/users/trainer/demote/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await slotsCollection.updateOne(query, {
+        $set: { status: "pending", role: "member" },
       });
-      if (!trainer) {
-        return res.status(404).send({ error: "Trainer not found" });
-      }
-      const result = await usersCollection.updateOne(
-        {
-          email: req.params.email,
-        },
-        {
-          $set: { role: "member" },
-        }
-      );
-      res
-        .json({
-          success: true,
-          message: "demoted successfully",
-        })
-        .status(200);
+      res.send(result);
     });
 
     app.put("/user", async (req, res) => {
@@ -338,8 +298,8 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/trainer", async (req, res) => {
-      const result = await usersCollection
+    app.get("/users/trainer", verifyToken, async (req, res) => {
+      const result = await slotsCollection
         .find({
           role: "trainer",
         })
