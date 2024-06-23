@@ -78,34 +78,34 @@ async function run() {
       });
     };
 
-    // verify admin middleware
-    const verifyAdmin = async (req, res, next) => {
-      console.log("hello");
-      const user = req.decoded;
-      const query = { email: user?.email };
-      const result = await usersCollection.findOne(query);
-      console.log(result?.role);
-      if (!result || result?.role !== "admin")
-        return res.status(401).send({ message: "unauthorized access!!" });
+    // // verify admin middleware
+    // const verifyAdmin = async (req, res, next) => {
+    //   console.log("hello");
+    //   const user = req.decoded;
+    //   const query = { email: user?.email };
+    //   const result = await usersCollection.findOne(query);
+    //   console.log(result?.role);
+    //   if (!result || result?.role !== "admin")
+    //     return res.status(401).send({ message: "unauthorized access!!" });
 
-      next();
-    };
-    // verify trainer middleware
-    const verifyTrainer = async (req, res, next) => {
-      console.log("hello");
-      const user = req.decoded;
-      const query = { email: user?.email };
-      const result = await usersCollection.findOne(query);
-      console.log(result?.role);
-      if (!result || result?.role !== "trainer") {
-        return res.status(401).send({ message: "unauthorized access!!" });
-      }
+    //   next();
+    // };
+    // // verify trainer middleware
+    // const verifyTrainer = async (req, res, next) => {
+    //   console.log("hello");
+    //   const user = req.decoded;
+    //   const query = { email: user?.email };
+    //   const result = await usersCollection.findOne(query);
+    //   console.log(result?.role);
+    //   if (!result || result?.role !== "trainer") {
+    //     return res.status(401).send({ message: "unauthorized access!!" });
+    //   }
 
-      next();
-    };
+    //   next();
+    // };
 
     // Send a ping to confirm a successful connection
-    app.get("/slot-slot", async (req, res) => {
+    app.get("/slot-slot",verifyToken, async (req, res) => {
       const result = await slotsCollection
         .find({
           status: "pending",
