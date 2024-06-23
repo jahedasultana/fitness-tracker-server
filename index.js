@@ -8,22 +8,18 @@ const port = process.env.PORT || 5000;
 // middleware
 //Must remove "/" from your production URL
 app.use(
-    cors({
-      origin: [
-        "http://localhost:5173",
-        "https://fitness-tracker-b2f74.web.app",
-        "https://fitness-tracker-b2f74.firebaseapp.com",
-      ],
-      credentials: true,
-    })
-  );
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://fitness-tracker-b2f74.web.app",
+      "https://fitness-tracker-b2f74.firebaseapp.com",
+      "https://jade-gingersnap-ed17f2.netlify.app",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
-const {
-  MongoClient,
-  ServerApiVersion,
-  ObjectId,
- 
-} = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wotzmkf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -105,7 +101,7 @@ async function run() {
     // };
 
     // Send a ping to confirm a successful connection
-    app.get("/slot-slot",verifyToken, async (req, res) => {
+    app.get("/slot-slot", verifyToken, async (req, res) => {
       const result = await slotsCollection
         .find({
           status: "pending",
@@ -139,12 +135,12 @@ async function run() {
     });
 
     //slots data get activity page from DB
-    app.get('/slots/:email', async (req, res) => {
-        const email = req.params.email
-        const query = { email: email }
-        const result = await slotsCollection.findOne(query)
-        res.send(result)
-    })
+    app.get("/slots/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await slotsCollection.findOne(query);
+      res.send(result);
+    });
 
     app.get("/slot-add/:email", async (req, res) => {
       try {
@@ -160,32 +156,34 @@ async function run() {
     });
 
     app.get("/slot-manage/:email", async (req, res) => {
-        try {
-          const email = req.params.email;
-          const query = { email: email };
-          const result = await slotCollection.find(query).toArray(); // Use find() and toArray() to return a list of slots
-          res.send(result);
-        } catch (error) {
-          res.status(500).send({ message: "Failed to fetch trainer slots data", error });
-        }
-      });
-      
-    // Route to delete slot based on email
-app.delete('/slot-delete/:email', async (req, res) => {
-    try {
-      const email = req.params.email;
-      const result = await slotCollection.deleteOne({ email: email });
-      if (result.deletedCount === 0) {
-        return res.status(404).send({ message: 'No slots found for this email' });
+      try {
+        const email = req.params.email;
+        const query = { email: email };
+        const result = await slotCollection.find(query).toArray(); // Use find() and toArray() to return a list of slots
+        res.send(result);
+      } catch (error) {
+        res
+          .status(500)
+          .send({ message: "Failed to fetch trainer slots data", error });
       }
-      res.send(result);
-    } catch (error) {
-      console.error('Error deleting slot:', error);
-      res.status(500).send({ message: 'Failed to delete slot data', error });
-    }
-  });
+    });
 
-
+    // Route to delete slot based on email
+    app.delete("/slot-delete/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const result = await slotCollection.deleteOne({ email: email });
+        if (result.deletedCount === 0) {
+          return res
+            .status(404)
+            .send({ message: "No slots found for this email" });
+        }
+        res.send(result);
+      } catch (error) {
+        console.error("Error deleting slot:", error);
+        res.status(500).send({ message: "Failed to delete slot data", error });
+      }
+    });
 
     //for details page
     app.get("/slot/:id", async (req, res) => {
@@ -248,7 +246,6 @@ app.delete('/slot-delete/:email', async (req, res) => {
           .send({ message: "Failed to fetch trainer slots data", error });
       }
     });
-   
 
     app.post("/users/trainer/demote/:email", async (req, res) => {
       const trainer = await trainerCollection.findOne({
@@ -329,6 +326,12 @@ app.delete('/slot-delete/:email', async (req, res) => {
       res.send(result);
     });
 
+    app.patch("/update-userData/:id", async (req, res) => {
+      const data = req.body;
+      const filter = { _id: new ObjectId(req.params.id) };
+      // const result = await
+    });
+
     // get all users data from db
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
@@ -353,8 +356,15 @@ app.delete('/slot-delete/:email', async (req, res) => {
     // review data post here to DB
     app.post("/review", async (req, res) => {
       try {
-        const { displayName, photoURL, email, trainerId, review, rating, date } =
-          req.body;
+        const {
+          displayName,
+          photoURL,
+          email,
+          trainerId,
+          review,
+          rating,
+          date,
+        } = req.body;
         const newReview = {
           displayName,
           email,
@@ -362,7 +372,7 @@ app.delete('/slot-delete/:email', async (req, res) => {
           review,
           rating,
           date,
-          photoURL
+          photoURL,
         };
         const result = await reviewCollection.insertOne(newReview);
         res.status(201).json(result);
@@ -645,7 +655,6 @@ app.delete('/slot-delete/:email', async (req, res) => {
       }
     });
 
-    
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
