@@ -60,7 +60,7 @@ async function run() {
 
     // middlewares
     const verifyToken = (req, res, next) => {
-      console.log("inside verify token", req.headers.authorization);
+     
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "unauthorized access" });
       }
@@ -89,6 +89,7 @@ async function run() {
         const result = await slotsCollection
           .find({ status: "approved", role: "trainer" })
           .toArray();
+
         res.send(result);
       } catch (error) {
         res.status(500).send({ message: "Failed to fetch slots data", error });
@@ -141,6 +142,8 @@ async function run() {
           .send({ message: "Failed to fetch trainer slots data", error });
       }
     });
+
+
 
     // Route to delete slot based on email
     app.delete("/slot-delete/:email", async (req, res) => {
