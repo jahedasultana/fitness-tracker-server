@@ -12,7 +12,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://fitness-tracker-b2f74.web.app",
-      "https://pha12-fitness-tracker-client.vercel.app",
+      "https://pha12-fitness-tracker-client-seven.vercel.app",
       "https://fitness-tracker-b2f74.firebaseapp.com",
       "https://jade-gingersnap-ed17f2.netlify.app",
     ],
