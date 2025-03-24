@@ -234,6 +234,29 @@ async function run() {
       res.send(result);
     });
 
+
+// user post
+    app.post("/user", async (req, res) => {
+      const user = req.body;
+
+      if (!user?.email || !user?.name) {
+          return res.status(400).json({ message: "Email and Name are required." });
+      }
+
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
+
+      if (existingUser) {
+          return res.status(409).json({ message: "User already exists." });
+      }
+
+      const result = await usersCollection.insertOne(user);
+      res.status(201).json({ message: "User created successfully.", userId: result.insertedId });
+  });
+
+
+
+/*
     app.put("/user", async (req, res) => {
       const user = req.body;
       const query = { email: user?.email };
@@ -282,6 +305,11 @@ async function run() {
         res.status(500).send({ message: "Internal server error", error });
       }
     });
+
+*/
+    
+
+
 
     // get all user email from db.
     app.get("/user/:email", async (req, res) => {
