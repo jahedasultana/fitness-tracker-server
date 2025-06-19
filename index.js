@@ -75,6 +75,14 @@ async function run() {
       });
     };
 
+
+
+  app.get('/testing-data', async (req, res) => {
+      res.send('testing done');
+    })
+
+
+
     // Send a ping to confirm a successful connection
     app.get("/slot-slot", verifyToken, async (req, res) => {
       const result = await slotsCollection
